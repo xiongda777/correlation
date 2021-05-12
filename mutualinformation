@@ -1,0 +1,23 @@
+from sklearn import metrics 
+import pandas as pd 
+import numpy as np
+np.set_printoptions(suppress=True)
+pd.set_option('display.float_format', lambda x: '%.4f' %x)
+#互信息相关度
+def mutualinformation(x):
+    nmi=np.empty((x.shape[1],x.shape[1]))#产生一个空矩阵
+    for i in range(x.shape[1]):
+        for j in range(x.shape[1]):
+            A=np.array(x.iloc[:,[i]].T)#提取i，j两列数据
+            B=np.array(x.iloc[:,[j]].T)
+            nmi[i][j]=metrics.normalized_mutual_info_score(A[0,:],B[0,:])#计算互信息相关度
+    return pd.DataFrame(nmi,columns=x.columns,index=x.columns.T)#返回互信息相关度矩阵
+
+
+if __name__ == "__main__":
+    #鸢尾花数据集
+    data=pd.read_csv(r"C:\Users\pc\Desktop\python\数据集\车辆加热冷却负载\ENB.csv",header=0,index_col=None)
+    #取出有数据的列
+    x=data[data.columns[1:5]]
+    c=mutualinformation(data)
+    print(c)
