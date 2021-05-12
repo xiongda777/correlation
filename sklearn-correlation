@@ -1,0 +1,75 @@
+import numpy as np
+import pandas as pd 
+import scipy
+import greyrelation as GR
+from sklearn import metrics 
+# 相关系数的取值范围在-1到1之间，当τ为1时，表示两个随机变量拥有一致的等级相关性；
+# 当τ为-1时，表示两个随机变量拥有完全相反的等级相关性；
+# 当τ为0时，表示两个随机变量是相互独立的。
+class correlation:
+    def __init__(self,x,y):
+        self.x=x
+        self.y=y
+        self.pccs=pd.concat([self.x,self.y],axis=1)
+     
+    #person相关系数计算
+    #计算积距pearson相关系数，连续性变量才可采用
+    def personcorrelation(self):
+        # pccs = np.corrcoef(self.x, self.y)
+        #np.corcoef也能实现，但是是以行实现的，数据要转换为np.array,不如pd方法实现的美观直接
+        return self.pccs.corr("pearson")
+     #当两个变量的标准差都不为零时，相关系数才有定义，皮尔逊相关系数适用于：
+     # (1)、两个变量之间是线性关系，都是连续数据。
+     # (2)、两个变量的总体是正态分布，或接近正态的单峰分布。
+     # (3)、两个变量的观测值是成对的，每对观测值之间相互独立。
+    
+
+    #斯皮尔曼相关系数
+    # 适合于定序变量或不满足正态分布假设的等间隔数据
+    def spearmancorrelation(self):               
+        return self.pccs.corr("spearman")
+     # 斯皮尔曼等级相关系数对数据条件的要求没有皮尔逊相关系数严格，只要两个变量的观测值是成对的等级评定资料
+     # 或者是由连续变量观测资料转化得到的等级资料，不论两个变量的总体分布形态、样本容量的大小如何
+     # 都可以用斯皮尔曼等级相关系数来进行研究
+
+    # 肯德尔相关系数与斯皮尔曼相关系数对数据条件的要求相同
+    # 用于反映分类变量相关性的指标，适用于两个分类变量均为有序分类的情况。
+    def kendallcorrelation(self):              
+        return self.pccs.corr("kendall")
+
+    def greyrelation(self):
+        cor1=[]
+        for i in range(self.pccs.shape[1]):
+            y=self.pccs[[self.pccs.columns[i]]]
+            x=self.pccs
+            cor=GR.greyrelation(x,y)
+            cor.dismensionless()
+            cor1.append(np.array(cor.relation()).ravel())        
+        cor1=pd.DataFrame(cor1,index=self.pccs.columns,columns=self.pccs.columns)
+        return cor1
+
+    #互信息相关度
+    def mutualinformation(self):
+        nmi=np.empty((self.pccs.shape[1],self.pccs.shape[1]))#产生一个空矩阵
+        for i in range(self.pccs.shape[1]):
+            for j in range(self.pccs.shape[1]):
+                A=np.array(self.pccs.iloc[:,[i]].T)#提取i，j两列数据
+                B=np.array(self.pccs.iloc[:,[j]].T)
+                nmi[i][j]=metrics.normalized_mutual_info_score(A[0,:],B[0,:])#计算互信息相关度
+        return pd.DataFrame(nmi,columns=self.pccs.columns,index=self.pccs.columns.T)#返回互信息相关度矩阵
+
+    #t显著性检验
+    def sigtest(self,a):
+        a=a.applymap(lambda x : np.nan if x==1.0 else x)
+        t_test=a.applymap(lambda x:abs(x)*np.sqrt((self.pccs.shape[0]-2) / (1-x**2)))
+        alpha = 0.05
+        t_score = scipy.stats.t.isf(alpha/2, df = self.pccs.shape[0]-2)
+        t_test[t_test<t_score]=False#若不可信输出false
+        return t_test
+
+if __name__ == "__main__":
+    data=pd.read_csv(r"C:\Users\pc\Desktop\python\数据集\车辆加热冷却负载\ENB.csv",header=0,index_col=None)
+    x=data.iloc[:,-1]
+    y=data.iloc[:,0:-1]
+    cor=correlation(x,y)
+    print(cor.greyrelation())
