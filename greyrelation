@@ -1,0 +1,60 @@
+import numpy as np
+import pandas as pd 
+import math
+from sklearn.preprocessing import MinMaxScaler
+
+class greyrelation:
+    def __init__(self,reference_sequence,compare_sequence):
+        self.y=reference_sequence
+        self.x=compare_sequence
+        self.rcol=self.x.shape[1]#参考序列的列数
+        self.rrow=self.x.shape[0]#参考序列的行数
+        self.ccol=self.y.shape[1]#比较序列的列数
+        self.crow=self.y.shape[0]#比较序列的行数
+        self.relationxy=np.zeros(shape=(self.crow,self.ccol))
+        #每一列的最大最小值   
+        # self.max_x=np.max(self.x,axis=0)#参考序列的最大值最小值（输出为矩阵）
+        # self.min_x=np.min(self.x,axis=0)
+        # self.max_y=np.max(self.y,axis=0)#比较序列的最大值最小值
+        # self.min_y=np.min(self.y,axis=0)
+     
+        
+        
+    #无量纲化
+    def dismensionless(self):
+        # numpy方法
+        self.tempy=MinMaxScaler().fit_transform(self.y)
+        self.tempx=MinMaxScaler().fit_transform(self.x)
+        self.relationxy=self.tempy-self.tempx#比较序列减参考序列的矩阵
+        # print("参考序列：\n{}\n比较序列\n{}".format(self.tempx,self.tempy))
+
+    
+    def relation(self):
+        self.dismensionless()
+        p=np.max(self.relationxy,axis=1)
+        q=np.min(self.relationxy,axis=1)
+        relationnumber=np.zeros(shape=(self.crow,self.ccol))
+        for i in range(self.rrow):
+             for j in range(self.rcol):
+                for k in range(self.ccol):
+                    relationnumber[i][k]=(np.min(abs(q))+0.5*np.max(abs(p)))/((abs(self.tempx[i][j]-self.tempy[i][k]))+0.5*np.max(abs(p)))
+        # print("关联系数")
+        # print(relationnumber)
+        rel=np.zeros(shape=(1,self.ccol))
+        
+        for k in range(self.ccol):
+            sum1=0
+            for i in range(self.rrow):
+                sum1=sum1+relationnumber[i][k]
+                rel[0][k]=sum1
+        return rel/self.rrow
+    
+
+
+if __name__ == "__main__":
+    data=pd.read_csv(r"C:\Users\pc\Desktop\python\数据集\鸢尾花数据集\iris.csv")
+    x=data[['Sepal.Length','Sepal.Width','Petal.Length']]
+    y=data[['Petal.Width']]
+    grey=greyrelation(x,y)
+    grey.dismensionless()
+    print(grey.relation())
